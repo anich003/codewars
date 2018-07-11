@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 def calc_centroid(points):
     centroid = [0]*len(points[0])
@@ -28,7 +29,8 @@ def angle(p, q, u=None):
 
     if den == 0:
         den = 0.00001
-    
+
+    # Avoid rounding errors when num == den    
     if num/den < -1:
         return math.acos(-1)
 
@@ -52,7 +54,14 @@ def argmax(arr):
             max_val = arr[max_idx]
     return max_idx
 
+def drop_duplicate_points(points):
+    hashes = list(map(lambda p: hash(tuple(p)), points))
+    idxs = set(hashes.index(hsh) for hsh in hashes)
+    return [points[i] for i in idxs]
+
 def convex_hull(pointlist, verbose=False):
+    pointlist = drop_duplicate_points(pointlist)
+
     # Find the center of mass of all points and select the furthest point
     centroid = calc_centroid(pointlist)
     
@@ -92,27 +101,46 @@ def convex_hull(pointlist, verbose=False):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import numpy as np
-    np.random.seed(0)
-
-    points = np.random.rand(1000,2).tolist()
-    # points = [[1,0],[0,1],[-1,0],[0.5,1],[-0.5,0.25],[0.25,0.4]]
-    # points = [[0,1],[-0.5,0],[0.5,-1],[2,0.25],[2.5,0]]
-    # points = [[0, 0], [5, 3], [0, 3], [0,1.5]]
-    points = [[0, 0], [5, 3], [0, 5], [0, 3], [2, 3], [5, 3]]
+    # np.random.seed(0)
+    # points = np.random.rand(1000,2).tolist()
     
+    # Three points
+    points = [[0, 0], [5, 3], [0, 5]]
+    assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
+    
+    # As first case with central point
+    points = [[0, 0], [5, 3], [0, 5], [2, 3]]
+    assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
+
+    # As first case with colinear point
+    points = [[0, 0], [5, 3], [0, 5], [0, 3]]
+    assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
+
+    # # As first case with central point
+    # points = [[0, 0], [5, 3], [0, 5], [2, 3]]
+    # assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
+
+    # # With duplicated point
+    # points = [[0, 0], [5, 3], [0, 5], [5, 3]]
+    # assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
+
+    # # Central point, colinear poitn and duplicated point
+    # points = [[0, 0], [5, 3], [0, 5], [0, 3], [2, 3], [5, 3]]
+    # assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
+
     centroid = calc_centroid(points)
     distances = [L2(centroid,p) for p in points]
     p = points[argmax(distances)]
-    
     
     fig, ax = plt.subplots()
     ax.axhline(0, color='black', alpha=0.25)
     ax.axvline(0, color='black', alpha=0.25)
     ax.scatter(*zip(*points), color='lightblue', label='Data')
     ax.scatter(*centroid, color='blue', label='Center Of Mass')
-    ax.scatter(*p, color='red', label='Furthest Point from Centroid')
+    ax.scatter(*p, color='red', label='Starting Hull Point')
 
     hull = convex_hull(points)
+    print(hull)
     ax.plot(*zip(*hull+[hull[0]]), 'r--', label='hull')
     ax.axis('equal')
 
