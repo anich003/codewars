@@ -6,7 +6,8 @@ def calc_centroid(points):
     for point in points:
         for i,coord in enumerate(point):
             centroid[i] += coord
-    return list(map(lambda coord: coord/len(points), centroid))
+    n = len(points)
+    return [coord/n for coord in centroid]
 
 def L2(svec,dvec):
     return math.sqrt(sum((x-y)**2 for x,y in zip(svec,dvec)))
@@ -62,7 +63,7 @@ def drop_duplicate_points(points):
 def convex_hull(pointlist, verbose=False):
     pointlist = drop_duplicate_points(pointlist)
 
-    # Find the center of mass of all points and select the furthest point
+    # Find the center of mass of all points and select the point furthest away
     centroid = calc_centroid(pointlist)
     
     distances = [ L2(centroid, p) for p in pointlist ]
@@ -80,10 +81,11 @@ def convex_hull(pointlist, verbose=False):
     hull = [p]
 
     while True:
-        # Calculate angles from point p and select the point with the lowest angle from p
+        # Calculate angles from point p and select the point q with the lowest angle from p
         angles = list(map(lambda q: angle(p, q, u), pointlist))
         idx, _ = argmin(angles)
         q = pointlist[idx]
+        # Calculate new direction from p to q
         u = [qi-pi for qi,pi in zip(q,p)]
         p = q
         hull.append(p)
@@ -96,13 +98,23 @@ def convex_hull(pointlist, verbose=False):
         if len(hull) > len(pointlist):
             raise ValueError('There was an error calculating hull')
 
-    return hull[:-1]
+    # Remove colinear points from hull
+    result = []
+    curr_slope = None
+    for i in range(len(hull)-1):
+        point = hull[i]
+        next_point = hull[i+1]
+        slope = [np_i - p_i for np_i,p_i in zip(next_point, point)]
+        if slope and slope != curr_slope:
+            result.append(point)
+            curr_slope = slope
+
+    # return hull[:-1]
+    return result
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import numpy as np
-    # np.random.seed(0)
-    # points = np.random.rand(1000,2).tolist()
     
     # Three points
     points = [[0, 0], [5, 3], [0, 5]]
@@ -116,17 +128,22 @@ if __name__ == "__main__":
     points = [[0, 0], [5, 3], [0, 5], [0, 3]]
     assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
 
-    # # As first case with central point
-    # points = [[0, 0], [5, 3], [0, 5], [2, 3]]
-    # assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
+    # As first case with central point
+    points = [[0, 0], [5, 3], [0, 5], [2, 3]]
+    assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
 
-    # # With duplicated point
-    # points = [[0, 0], [5, 3], [0, 5], [5, 3]]
-    # assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
+    # With duplicated point
+    points = [[0, 0], [5, 3], [0, 5], [5, 3]]
+    assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
 
-    # # Central point, colinear poitn and duplicated point
-    # points = [[0, 0], [5, 3], [0, 5], [0, 3], [2, 3], [5, 3]]
-    # assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
+    # Central point, colinear poitn and duplicated point
+    points = [[0, 0], [5, 3], [0, 5], [0, 3], [2, 3], [5, 3]]
+    assert sorted(convex_hull(points)) == [[0, 0], [0, 5], [5, 3]]
+
+    np.random.seed(0)
+    xs = np.linspace(0,100,100)
+    ys = 0.5*xs+5+30*np.random.rand(100)
+    points = np.c_[xs,ys].tolist()
 
     centroid = calc_centroid(points)
     distances = [L2(centroid,p) for p in points]
